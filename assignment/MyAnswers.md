@@ -26,4 +26,8 @@ Using a JSON file makes it easier for us to change the parameters if we wish, ra
 
 "os.path.isfile" can't be used because it is not implemented in MicroPython.
 
+## Exercise 03
+
+### Question 01
+Increasing the sample time causes the timing of the dot dash threshold as well as the interletter threshold to become out of sync. So the pico cannot identify when I am trying to go from one letter to the next.
 
