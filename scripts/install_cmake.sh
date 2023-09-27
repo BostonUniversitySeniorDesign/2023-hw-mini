@@ -1,39 +1,66 @@
 #!/usr/bin/env bash
+# Download / extract CMake binary archive for CMake >= 3.20
 
 set -e
 
-version=3.27.3
+if [[ $# -lt 1 ]]; then
+[[ "$OSTYPE" -eq "msys" ]] && prefix="$USERPROFILE" || prefix="$HOME"
+else
+prefix=$1
+fi
+[[ -z "${prefix+x}" ]] && { echo "Usage: $0 install_prefix_path" >&2; exit 1; }
+
+[[ $# -lt 2 ]] && version="3.27.6" || version=$2
 
 # determine OS and arch
+stub=""
+ext=".tar.gz"
+
 case "$OSTYPE" in
 linux*)
 os="linux"
 arch=$(uname -m)
-stub=""
 [[ "$arch" == "arm64" ]] && arch="aarch64";;
 darwin*)
 os="macos"
 arch="universal"
 stub="CMake.app/Contents/";;
+msys*)
+os="windows"
+arch=$(uname -m)
+ext=".zip";;
 *)
-echo "$OSTYPE not supported"
+echo "$OSTYPE not supported" >&2
 exit 1;;
 esac
 
 # compose URL
 name=cmake-${version}-${os}-${arch}
-archive=${name}.tar.gz
-archive_path=$HOME/${archive}
+archive=${name}${ext}
+archive_path=${prefix}/${archive}
 url=https://github.com/Kitware/CMake/releases/download/v${version}/${archive}
 
 # download and extract CMake
 echo "${url} => ${archive_path}"
-curl --location --no-clobber --output ${archive_path} ${url}
+if curl --fail --location --output ${archive_path} ${url}; then
+:
+else
+echo "failed to download ${url}" >&2
+exit 1
+fi
 
-tar -x -v -f ${archive_path} -C $HOME
+case "$ext" in
+.tar.gz)
+tar -x -v -f ${archive_path} -C ${prefix};;
+.zip)
+unzip ${archive_path} -d ${prefix};;
+*)
+echo "unknown archive type ${ext}" >&2
+exit 1;;
+esac
 
 # prompt user to default shell to this new CMake
-export PATH=$HOME/$name/bin:$PATH
+export PATH=${prefix}/$name/bin:$PATH
 
 case "$SHELL" in
 */zsh)
@@ -41,8 +68,9 @@ shell="zsh";;
 */bash)
 shell="bash";;
 *)
-echo "unknown shell $SHELL"
+echo "please add to environment variable PATH: ${prefix}/$name/${stub}bin"
+exit;;
 esac
 
-[[ -z ${shell+x} ]] || echo "please add the following line to file $HOME/.${shell}rc"
-echo "export PATH=$HOME/$name/${stub}bin:\$PATH"
+[[ -z ${shell+x} ]] || echo "please add the following line to file ${prefix}/.${shell}rc"
+echo "export PATH=${prefix}/$name/${stub}bin:\$PATH"
